@@ -125,7 +125,7 @@ fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
 fn main() {
     for solid in PlatonicSolid::iter() {
         let locs = relax(
-            &neighbors_for_solid(&PlatonicSolid::Tetrahedron),
+            &neighbors_for_solid(&solid),
             RelaxParams {
                 spring_constant: 10.0,
                 natural_length: 1.0,
