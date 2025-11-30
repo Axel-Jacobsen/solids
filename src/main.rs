@@ -124,8 +124,9 @@ fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
 
 fn main() {
     for solid in PlatonicSolid::iter() {
+        let neighbors = &neighbors_for_solid(&solid);
         let locs = relax(
-            &neighbors_for_solid(&solid),
+            neighbors,
             RelaxParams {
                 spring_constant: 10.0,
                 natural_length: 1.0,
@@ -135,6 +136,9 @@ fn main() {
                 total_movement_thresh: 1e-6,
             },
         );
-        println!("{:?}: {:?}", solid, locs);
+        println!(
+            "{:?}: locations {:?} neighbors {:?}",
+            solid, locs, neighbors
+        );
     }
 }
