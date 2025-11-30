@@ -1,12 +1,4 @@
 //! Generate the Platonic solids as STL files via constraints.
-//!
-//! Every edge of a Platonic solid is of the same length. Every vertex of a platonic solid has the
-//! same number of edges.
-//!
-//! How do we do this?
-//!
-//! Iterively:
-//! - Specify the number of veriticies and number of edges meeting at each vertex.
 
 use nalgebra::{Point3, Vector3};
 use rand::prelude::*;
@@ -57,9 +49,6 @@ struct RelaxParams {
 }
 
 // Relax the locations of the neighbors by assuming each edge is a spring with damper.
-//
-// F = ma
-// ma = kx + cv
 fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
     let RelaxParams {
         spring_constant,
