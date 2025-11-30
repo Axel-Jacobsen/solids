@@ -1,3 +1,6 @@
+use strum::EnumIter;
+
+#[derive(Debug, EnumIter)]
 pub enum PlatonicSolid {
     Tetrahedron,
     Cube,

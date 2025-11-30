@@ -2,6 +2,7 @@
 
 use nalgebra::{Point3, Vector3};
 use rand::prelude::*;
+use strum::IntoEnumIterator;
 
 mod platonic_solids;
 use platonic_solids::*;
@@ -62,17 +63,15 @@ fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
     let mut locations: Locations = std::collections::HashMap::from_iter(
         neighbors.keys().map(|k| (*k, random_point_in_unit_cube())),
     );
-
     let mut velocities: Velocities = std::collections::HashMap::from_iter(
         neighbors.keys().map(|k| (*k, Vector3::new(0.0, 0.0, 0.0))),
     );
-
     let mut forces: Forces = std::collections::HashMap::from_iter(
         neighbors.keys().map(|k| (*k, Vector3::new(0.0, 0.0, 0.0))),
     );
 
     loop {
-        // reset forces
+        // Reset forces
         for f in forces.values_mut() {
             *f = Vector3::new(0.0, 0.0, 0.0);
         }
@@ -124,17 +123,18 @@ fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
 }
 
 fn main() {
-    let vs = neighbors_for_solid(&PlatonicSolid::Tetrahedron);
-    let locs = relax(
-        &vs,
-        RelaxParams {
-            spring_constant: 10.0,
-            natural_length: 1.0,
-            damping_constant: 1.0,
-            vertex_mass: 1.0,
-            dt: 1e-3,
-            total_movement_thresh: 1e-6,
-        },
-    );
-    println!("{:?}, {:?}", vs, locs);
+    for solid in PlatonicSolid::iter() {
+        let locs = relax(
+            &neighbors_for_solid(&PlatonicSolid::Tetrahedron),
+            RelaxParams {
+                spring_constant: 10.0,
+                natural_length: 1.0,
+                damping_constant: 1.0,
+                vertex_mass: 1.0,
+                dt: 1e-3,
+                total_movement_thresh: 1e-6,
+            },
+        );
+        println!("{:?}: {:?}", solid, locs);
+    }
 }
