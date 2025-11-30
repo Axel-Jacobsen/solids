@@ -77,20 +77,15 @@ fn neighbors_for_solid(platonic_solid: &PlatonicSolid) -> Neighbors {
 
     let edges_per_vertex = number_of_edges_per_vertex(platonic_solid);
 
-    loop {
+    while let Some(v1) = neighbors
+        .iter()
+        .find(|(_v, n)| n.len() < edges_per_vertex)
+        .map(|(v, _)| *v)
+    {
         // Get a vertex from the neighbor map.
-        let v1 = match neighbors
-            .iter()
-            .find(|(_v, n)| n.len() < edges_per_vertex)
-            .map(|(v, _)| *v)
-        {
-            Some(v) => v,
-            None => break,
-        };
-
         let v2 = match neighbors
             .iter()
-            .find(|(v, n)| v != &&v1 && !n.contains(&&v1) && n.len() < edges_per_vertex)
+            .find(|(v, n)| v != &&v1 && !n.contains(&v1) && n.len() < edges_per_vertex)
             .map(|(v, _)| *v)
         {
             Some(v) => v,
