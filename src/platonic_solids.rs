@@ -1,5 +1,8 @@
 use strum::EnumIter;
 
+pub type VertexId = usize;
+pub type Neighbors = std::collections::HashMap<VertexId, Vec<VertexId>>;
+
 #[derive(Debug, EnumIter)]
 pub enum PlatonicSolid {
     Tetrahedron,
@@ -37,6 +40,26 @@ pub fn edges_for_solid(platonic_solid: &PlatonicSolid) -> &[(usize, usize)] {
         PlatonicSolid::Dodecahedron => EDGES_DODECAHEDRON,
         PlatonicSolid::Icosahedron => EDGES_ICOSAHEDRON,
     }
+}
+
+pub fn neighbors_for_solid(solid: &PlatonicSolid) -> Neighbors {
+    let edges = edges_for_solid(solid);
+
+    let n = number_of_verticies(solid);
+    let mut neighbors: Neighbors = (0..n).map(|i| (i, Vec::new())).collect();
+
+    for &(a, b) in edges {
+        neighbors
+            .get_mut(&a)
+            .expect("can't find vertex for edge")
+            .push(b);
+        neighbors
+            .get_mut(&b)
+            .expect("can't find vertex for edge")
+            .push(a);
+    }
+
+    neighbors
 }
 
 /// Tetrahedron: K4
