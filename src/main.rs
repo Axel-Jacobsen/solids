@@ -8,100 +8,144 @@
 //! Iterively:
 //! - Specify the number of veriticies and number of edges meeting at each vertex.
 
-/// Regular polygons. Please excuse me dropping 'Regular'.
-#[derive(Debug)]
-enum Polygon {
-    Triangle,
-    Square,
-    Pentagon,
-}
+use nalgebra::{Point3, Vector3};
+use rand::prelude::*;
 
-fn number_of_edges(polygon: &Polygon) -> usize {
-    match polygon {
-        Polygon::Triangle => 3,
-        Polygon::Square => 4,
-        Polygon::Pentagon => 5,
-    }
-}
-
-enum PlatonicSolid {
-    Tetrahedron,
-    Cube,
-    Octahedron,
-    Dodecahedron,
-    Icosahedron,
-}
-
-fn face_type(platonic_solid: &PlatonicSolid) -> Polygon {
-    match platonic_solid {
-        PlatonicSolid::Tetrahedron => Polygon::Triangle,
-        PlatonicSolid::Cube => Polygon::Square,
-        PlatonicSolid::Octahedron => Polygon::Triangle,
-        PlatonicSolid::Dodecahedron => Polygon::Pentagon,
-        PlatonicSolid::Icosahedron => Polygon::Triangle,
-    }
-}
-
-fn number_of_faces(platonic_solid: &PlatonicSolid) -> usize {
-    match platonic_solid {
-        PlatonicSolid::Tetrahedron => 4,
-        PlatonicSolid::Cube => 6,
-        PlatonicSolid::Octahedron => 8,
-        PlatonicSolid::Dodecahedron => 12,
-        PlatonicSolid::Icosahedron => 20,
-    }
-}
-
-fn number_of_verticies(platonic_solid: &PlatonicSolid) -> usize {
-    match platonic_solid {
-        PlatonicSolid::Tetrahedron => 4,
-        PlatonicSolid::Cube => 8,
-        PlatonicSolid::Octahedron => 6,
-        PlatonicSolid::Dodecahedron => 20,
-        PlatonicSolid::Icosahedron => 12,
-    }
-}
-
-fn number_of_edges_per_vertex(platonic_solid: &PlatonicSolid) -> usize {
-    number_of_edges(&face_type(platonic_solid))
-}
+mod platonic_solids;
+use platonic_solids::*;
 
 type VertexId = usize;
-type Locations = std::collections::HashMap<VertexId, [f64; 3]>;
 type Neighbors = std::collections::HashMap<VertexId, Vec<VertexId>>;
 
-fn neighbors_for_solid(platonic_solid: &PlatonicSolid) -> Neighbors {
-    let mut neighbors: Neighbors = std::collections::HashMap::from_iter(
-        (0..number_of_verticies(platonic_solid)).map(|i| (i, vec![])),
-    );
+type Locations = std::collections::HashMap<VertexId, Point3<f64>>;
+type Velocities = std::collections::HashMap<VertexId, Vector3<f64>>;
+type Forces = std::collections::HashMap<VertexId, Vector3<f64>>;
 
-    let edges_per_vertex = number_of_edges_per_vertex(platonic_solid);
+fn random_point_in_unit_cube() -> Point3<f64> {
+    let mut rng = rand::rng();
+    let (x, y, z): (f64, f64, f64) = rng.random();
+    Point3::new(x, y, z)
+}
 
-    while let Some(v1) = neighbors
-        .iter()
-        .find(|(_v, n)| n.len() < edges_per_vertex)
-        .map(|(v, _)| *v)
-    {
-        // Get a vertex from the neighbor map.
-        let v2 = match neighbors
-            .iter()
-            .find(|(v, n)| v != &&v1 && !n.contains(&v1) && n.len() < edges_per_vertex)
-            .map(|(v, _)| *v)
-        {
-            Some(v) => v,
-            None => {
-                panic!("shouldn't be possible, should not be able to have only 1 incomplete vertex")
-            }
-        };
+fn neighbors_for_solid(solid: &PlatonicSolid) -> Neighbors {
+    let edges = edges_for_solid(solid);
 
-        neighbors.get_mut(&v1).expect("not possible").push(v2);
-        neighbors.get_mut(&v2).expect("not possible").push(v1);
+    let n = number_of_verticies(solid);
+    let mut neighbors: Neighbors = (0..n).map(|i| (i, Vec::new())).collect();
+
+    for &(a, b) in edges {
+        neighbors
+            .get_mut(&a)
+            .expect("can't find vertex for edge")
+            .push(b);
+        neighbors
+            .get_mut(&b)
+            .expect("can't find vertex for edge")
+            .push(a);
     }
 
     neighbors
 }
 
+struct RelaxParams {
+    spring_constant: f64,
+    natural_length: f64,
+    damping_constant: f64,
+    vertex_mass: f64,
+    dt: f64,
+    total_movement_thresh: f64,
+}
+
+// Relax the locations of the neighbors by assuming each edge is a spring with damper.
+//
+// F = ma
+// ma = kx + cv
+fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
+    let RelaxParams {
+        spring_constant,
+        natural_length,
+        damping_constant,
+        vertex_mass,
+        dt,
+        total_movement_thresh,
+    } = relax_params;
+
+    let mut locations: Locations = std::collections::HashMap::from_iter(
+        neighbors.keys().map(|k| (*k, random_point_in_unit_cube())),
+    );
+
+    let mut velocities: Velocities = std::collections::HashMap::from_iter(
+        neighbors.keys().map(|k| (*k, Vector3::new(0.0, 0.0, 0.0))),
+    );
+
+    let mut forces: Forces = std::collections::HashMap::from_iter(
+        neighbors.keys().map(|k| (*k, Vector3::new(0.0, 0.0, 0.0))),
+    );
+
+    loop {
+        // reset forces
+        for f in forces.values_mut() {
+            *f = Vector3::new(0.0, 0.0, 0.0);
+        }
+
+        // Calculate the net force on each vertex.
+        for (vertex, neighbors) in neighbors.iter() {
+            let this_vertex_location = locations.get(vertex).unwrap(); // I weep for the unwraps.
+
+            // Spring.
+            for neighbor in neighbors {
+                let neighbor_location = locations.get(neighbor).unwrap();
+
+                let distance = nalgebra::distance(neighbor_location, this_vertex_location);
+                let force_mag = spring_constant * (distance - natural_length);
+
+                *forces.get_mut(vertex).unwrap() +=
+                    force_mag * (neighbor_location - this_vertex_location).normalize()
+            }
+
+            // Damping.
+            let this_vertex_velocity = velocities.get(vertex).unwrap();
+            *forces.get_mut(vertex).unwrap() -= damping_constant * this_vertex_velocity;
+        }
+
+        // Update states.
+        // x = x0 + vt + 1/2 at^2
+        // F = ma => a = F / m
+        // a = dv/dt = (v1 - v0) / t so v1 = at + v0
+        let mut total_movement = 0.0;
+        for vertex in neighbors.keys() {
+            // Calculate acceleration.
+            let acceleration = forces.get(vertex).unwrap() / vertex_mass;
+
+            // Calculate displacement from current position.
+            let movement = velocities.get(vertex).unwrap() * dt + 0.5 * acceleration * dt * dt;
+
+            // Update position and velocity.
+            *locations.get_mut(vertex).unwrap() += movement;
+            *velocities.get_mut(vertex).unwrap() += acceleration * dt;
+            total_movement += movement.magnitude();
+        }
+
+        if total_movement < total_movement_thresh {
+            break;
+        }
+    }
+
+    locations
+}
+
 fn main() {
     let vs = neighbors_for_solid(&PlatonicSolid::Tetrahedron);
-    println!("{:?}", vs);
+    let locs = relax(
+        &vs,
+        RelaxParams {
+            spring_constant: 10.0,
+            natural_length: 1.0,
+            damping_constant: 1.0,
+            vertex_mass: 1.0,
+            dt: 1e-3,
+            total_movement_thresh: 1e-6,
+        },
+    );
+    println!("{:?}, {:?}", vs, locs);
 }
