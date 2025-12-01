@@ -1,9 +1,9 @@
-use strum::EnumIter;
+use strum::{Display, EnumIter};
 
 pub type VertexId = usize;
 pub type Neighbors = std::collections::HashMap<VertexId, Vec<VertexId>>;
 
-#[derive(Debug, EnumIter)]
+#[derive(Debug, Display, EnumIter)]
 pub enum PlatonicSolid {
     Tetrahedron,
     Cube,
@@ -12,13 +12,69 @@ pub enum PlatonicSolid {
     Icosahedron,
 }
 
-pub fn number_of_faces(platonic_solid: &PlatonicSolid) -> usize {
-    match platonic_solid {
-        PlatonicSolid::Tetrahedron => 4,
-        PlatonicSolid::Cube => 6,
-        PlatonicSolid::Octahedron => 8,
-        PlatonicSolid::Dodecahedron => 12,
-        PlatonicSolid::Icosahedron => 20,
+pub fn faces_for_solid(solid: &PlatonicSolid) -> Vec<Vec<VertexId>> {
+    match solid {
+        PlatonicSolid::Tetrahedron => {
+            vec![vec![0, 1, 2], vec![0, 3, 1], vec![0, 2, 3], vec![1, 3, 2]]
+        }
+
+        PlatonicSolid::Cube => vec![
+            vec![0, 3, 2, 1],
+            vec![0, 1, 7, 6],
+            vec![0, 6, 5, 3],
+            vec![4, 2, 3, 5],
+            vec![4, 7, 1, 2],
+            vec![4, 5, 6, 7],
+        ],
+
+        PlatonicSolid::Octahedron => vec![
+            vec![0, 1, 5],
+            vec![1, 3, 5],
+            vec![3, 4, 5],
+            vec![0, 5, 4],
+            vec![0, 2, 1],
+            vec![1, 2, 3],
+            vec![3, 2, 4],
+            vec![0, 4, 2],
+        ],
+
+        PlatonicSolid::Dodecahedron => vec![
+            vec![0, 13, 11, 1, 3],
+            vec![0, 3, 2, 8, 10],
+            vec![0, 10, 18, 12, 13],
+            vec![1, 4, 7, 2, 3],
+            vec![1, 11, 14, 5, 4],
+            vec![2, 7, 9, 6, 8],
+            vec![5, 15, 9, 7, 4],
+            vec![5, 14, 17, 19, 15],
+            vec![6, 16, 18, 10, 8],
+            vec![6, 9, 15, 19, 16],
+            vec![12, 17, 14, 11, 13],
+            vec![12, 18, 16, 19, 17],
+        ],
+
+        PlatonicSolid::Icosahedron => vec![
+            vec![0, 11, 5],
+            vec![0, 5, 1],
+            vec![0, 1, 7],
+            vec![0, 7, 10],
+            vec![0, 10, 11],
+            vec![1, 5, 9],
+            vec![5, 11, 4],
+            vec![11, 10, 2],
+            vec![10, 7, 6],
+            vec![7, 1, 8],
+            vec![3, 9, 4],
+            vec![3, 4, 2],
+            vec![3, 2, 6],
+            vec![3, 6, 8],
+            vec![3, 8, 9],
+            vec![4, 9, 5],
+            vec![2, 4, 11],
+            vec![6, 2, 10],
+            vec![8, 6, 7],
+            vec![9, 8, 1],
+        ],
     }
 }
 
@@ -62,10 +118,8 @@ pub fn neighbors_for_solid(solid: &PlatonicSolid) -> Neighbors {
     neighbors
 }
 
-/// Tetrahedron: K4
 pub const EDGES_TETRAHEDRON: &[(usize, usize)] = &[(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)];
 
-/// Cube: bottom square 0–3, top square 4–7
 pub const EDGES_CUBE: &[(usize, usize)] = &[
     (0, 1),
     (1, 2),
@@ -81,7 +135,6 @@ pub const EDGES_CUBE: &[(usize, usize)] = &[
     (3, 7),
 ];
 
-/// Octahedron: 0 = top, 5 = bottom, 1–4 = equator cycle
 pub const EDGES_OCTAHEDRON: &[(usize, usize)] = &[
     (0, 1),
     (0, 2),
@@ -97,7 +150,6 @@ pub const EDGES_OCTAHEDRON: &[(usize, usize)] = &[
     (4, 1),
 ];
 
-/// Icosahedron: coordinates-based pub construction, labeled 0..11
 pub const EDGES_ICOSAHEDRON: &[(usize, usize)] = &[
     (0, 2),
     (0, 4),
@@ -131,7 +183,6 @@ pub const EDGES_ICOSAHEDRON: &[(usize, usize)] = &[
     (10, 11),
 ];
 
-/// Dodecahedron: 20-vertex 3-regular graph, labeled 0..19
 pub const EDGES_DODECAHEDRON: &[(usize, usize)] = &[
     (0, 8),
     (0, 12),

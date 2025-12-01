@@ -3,7 +3,7 @@ use rand::prelude::*;
 
 use crate::platonic_solids::*;
 
-type Locations = std::collections::HashMap<VertexId, Point3<f64>>;
+pub type Locations = std::collections::HashMap<VertexId, Point3<f64>>;
 type Forces = std::collections::HashMap<VertexId, Vector3<f64>>;
 
 fn random_point() -> Point3<f64> {
