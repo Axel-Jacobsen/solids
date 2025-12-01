@@ -44,25 +44,21 @@ pub fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
         for (vertex, neighbors) in neighbors.iter() {
             let this_vertex_location = locations.get(vertex).unwrap(); // I weep for the unwraps.
 
-            // Spring.
             for neighbor in neighbors {
                 let neighbor_location = locations.get(neighbor).unwrap();
 
                 let distance = nalgebra::distance(neighbor_location, this_vertex_location);
-                let force_mag = spring_constant * (distance - natural_length);
 
+                // Spring.
+                let spring_force_mag = spring_constant * (distance - natural_length);
                 *forces.get_mut(vertex).unwrap() +=
-                    force_mag * (neighbor_location - this_vertex_location).normalize()
+                    spring_force_mag * (neighbor_location - this_vertex_location).normalize();
             }
         }
 
         // Update states.
-        // x = x0 + vt + 1/2 at^2
-        // F = ma => a = F / m
-        // a = dv/dt = (v1 - v0) / t so v1 = at + v0
         let mut total_movement = 0.0;
         for vertex in neighbors.keys() {
-            // Update position and velocity.
             let movement = forces[vertex] * step_size;
             *locations.get_mut(vertex).unwrap() += movement;
             total_movement += movement.norm();
