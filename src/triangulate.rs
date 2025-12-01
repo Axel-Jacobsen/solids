@@ -5,17 +5,79 @@ use std::path::Path;
 use crate::platonic_solids::VertexId;
 use crate::relax_solid::Locations;
 
-pub fn triangulate_faces(faces: &Vec<Vec<VertexId>>) -> Vec<[VertexId; 3]> {
-    let mut tris = Vec::new();
-    for face in faces {
-        if face.len() < 3 {
-            continue;
-        }
-        // (v0, v_i, v_{i+1})
-        for i in 1..(face.len() - 1) {
-            tris.push([face[0], face[i], face[i + 1]]);
+pub fn hull_triangles(locations: &Locations) -> Vec<[VertexId; 3]> {
+    let mut ids: Vec<VertexId> = locations.keys().copied().collect();
+    ids.sort();
+    let n = ids.len();
+
+    let mut seen = std::collections::HashSet::<(VertexId, VertexId, VertexId)>::new();
+    let mut tris = Vec::<[VertexId; 3]>::new();
+
+    for a in 0..n {
+        for b in (a + 1)..n {
+            for c in (b + 1)..n {
+                let i = ids[a];
+                let j = ids[b];
+                let k = ids[c];
+
+                let pi = locations[&i];
+                let pj = locations[&j];
+                let pk = locations[&k];
+
+                let v1: nalgebra::Vector3<f64> = pj - pi;
+                let v2: nalgebra::Vector3<f64> = pk - pi;
+                let mut nrm = v1.cross(&v2);
+                let nrm_norm = nrm.norm();
+
+                let eps = 1e-6;
+                if nrm_norm < eps {
+                    continue; // colinear / degenerate
+                }
+                nrm /= nrm_norm;
+
+                // Check all other points lie on one side (or in plane)
+                let mut min_d = 0.0;
+                let mut max_d = 0.0;
+
+                for &l_id in &ids {
+                    if l_id == i || l_id == j || l_id == k {
+                        continue;
+                    }
+                    let pl = locations[&l_id];
+                    let d = nrm.dot(&(pl - pi));
+                    if d < min_d {
+                        min_d = d;
+                    }
+                    if d > max_d {
+                        max_d = d;
+                    }
+                    // if we have points on both sides, not a hull facet
+                    if min_d < -eps && max_d > eps {
+                        break;
+                    }
+                }
+
+                if min_d < -eps && max_d > eps {
+                    continue; // both sides -> internal triangle
+                }
+
+                // orient roughly outward (assuming centered at origin)
+                let face_center = (pi.coords + pj.coords + pk.coords) / 3.0;
+                let mut tri = [i, j, k];
+                if nrm.dot(&face_center) < 0.0 {
+                    tri.swap(1, 2); // flip winding
+                }
+
+                // dedup by sorted ids
+                let mut key = tri;
+                key.sort();
+                if seen.insert((key[0], key[1], key[2])) {
+                    tris.push(tri);
+                }
+            }
         }
     }
+
     tris
 }
 
