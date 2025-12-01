@@ -14,6 +14,7 @@ fn random_point() -> Point3<f64> {
 
 pub struct RelaxParams {
     pub spring_constant: f64,
+    pub repulsion_constant: f64,
     pub natural_length: f64,
     pub step_size: f64,
     pub total_movement_thresh: f64,
@@ -26,6 +27,7 @@ pub fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
         natural_length,
         step_size,
         total_movement_thresh,
+        repulsion_constant,
     } = relax_params;
 
     let mut locations: Locations =
@@ -41,18 +43,32 @@ pub fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
         }
 
         // Calculate the net force on each vertex.
-        for (vertex, neighbors) in neighbors.iter() {
+        for (vertex, vertex_neighbors) in neighbors.iter() {
             let this_vertex_location = locations.get(vertex).unwrap(); // I weep for the unwraps.
 
-            for neighbor in neighbors {
+            for neighbor in vertex_neighbors {
                 let neighbor_location = locations.get(neighbor).unwrap();
-
                 let distance = nalgebra::distance(neighbor_location, this_vertex_location);
 
                 // Spring.
-                let spring_force_mag = spring_constant * (distance - natural_length);
+                let spring_force_mag = 0.5 * spring_constant * (distance - natural_length);
                 *forces.get_mut(vertex).unwrap() +=
                     spring_force_mag * (neighbor_location - this_vertex_location).normalize();
+            }
+
+            // Repulsion.
+            for other_vertex in neighbors.keys() {
+                if other_vertex == vertex {
+                    continue;
+                }
+
+                let neighbor_location = locations.get(other_vertex).unwrap();
+                let distance = nalgebra::distance(neighbor_location, this_vertex_location);
+
+                let repulsion_force_mag = -repulsion_constant / (distance * distance);
+
+                *forces.get_mut(vertex).unwrap() +=
+                    repulsion_force_mag * (neighbor_location - this_vertex_location).normalize();
             }
         }
 

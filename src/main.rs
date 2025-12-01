@@ -16,10 +16,11 @@ fn main() {
         let locations = relax(
             neighbors,
             RelaxParams {
-                spring_constant: 100.0,
+                spring_constant: 1.0,
+                repulsion_constant: 1.0,
                 natural_length: 1.0,
-                step_size: 1e-3,
-                total_movement_thresh: 1e-6,
+                step_size: 1e-6,
+                total_movement_thresh: 1e-5,
             },
         );
 
