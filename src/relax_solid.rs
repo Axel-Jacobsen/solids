@@ -6,10 +6,10 @@ use crate::platonic_solids::*;
 pub type Locations = std::collections::HashMap<VertexId, Point3<f64>>;
 type Forces = std::collections::HashMap<VertexId, Vector3<f64>>;
 
-fn random_point() -> Point3<f64> {
+fn random_point(sphere_size: f64) -> Point3<f64> {
     let mut rng = rand::rng();
     let (x, y, z): (f64, f64, f64) = rng.random();
-    Point3::new(x, y, z)
+    sphere_size * Point3::new(x, y, z)
 }
 
 pub struct RelaxParams {
@@ -31,7 +31,7 @@ pub fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
     } = relax_params;
 
     let mut locations: Locations =
-        std::collections::HashMap::from_iter(neighbors.keys().map(|k| (*k, random_point())));
+        std::collections::HashMap::from_iter(neighbors.keys().map(|k| (*k, random_point(10.0))));
     let mut forces: Forces = std::collections::HashMap::from_iter(
         neighbors.keys().map(|k| (*k, Vector3::new(0.0, 0.0, 0.0))),
     );
