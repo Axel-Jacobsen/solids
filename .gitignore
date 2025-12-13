@@ -1,3 +1,5 @@
 /target
 *.stl
+/outputs
 .DS_Store
+the-solids.3mf
