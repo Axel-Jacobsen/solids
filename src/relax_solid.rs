@@ -1,9 +1,8 @@
 use nalgebra::{Point3, Vector3};
 use rand::prelude::*;
 
-use crate::platonic_solids::*;
+use crate::solid::{Locations, Neighbors, VertexId};
 
-pub type Locations = std::collections::HashMap<VertexId, Point3<f64>>;
 type Forces = std::collections::HashMap<VertexId, Vector3<f64>>;
 
 fn random_point(sphere_size: f64) -> Point3<f64> {

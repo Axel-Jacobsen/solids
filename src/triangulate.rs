@@ -2,9 +2,9 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
-use crate::platonic_solids::VertexId;
-use crate::relax_solid::Locations;
+use crate::solid::{Locations, VertexId};
 
+/// Slow hull algorithm.
 pub fn hull_triangles(locations: &Locations) -> Vec<[VertexId; 3]> {
     let mut ids: Vec<VertexId> = locations.keys().copied().collect();
     ids.sort();

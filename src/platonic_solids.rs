@@ -1,7 +1,6 @@
 use strum::{Display, EnumIter};
 
-pub type VertexId = usize;
-pub type Neighbors = std::collections::HashMap<VertexId, Vec<VertexId>>;
+use crate::solid::Neighbors;
 
 #[derive(Debug, Display, EnumIter)]
 pub enum PlatonicSolid {
