@@ -14,7 +14,7 @@ pub trait Draw {
         &self,
         ray_source: nalgebra::Point3<f64>,
         ray_direction: nalgebra::Vector3<f64>,
-    ) -> bool;
+    ) -> f64;
 }
 
 pub struct ViewParams {
@@ -36,22 +36,16 @@ pub fn view<D: Draw>(object: &D, cfg: &ViewParams) -> ndarray::Array2<u8> {
     let w = cfg.image_width_px as f64 * cfg.pixel_size;
     let h = cfg.image_height_px as f64 * cfg.pixel_size;
 
-    // bottom-left of sensor plane
     let origin = cfg.camera_center - 0.5 * w * u - 0.5 * h * v;
 
     let mut image = ndarray::Array2::<u8>::zeros((cfg.image_height_px, cfg.image_width_px));
     for x in 0..cfg.image_width_px {
         for y in 0..cfg.image_height_px {
-            // sample pixel centers
             let ray_source = origin
                 + cfg.pixel_size * ((x as f64) + 0.5) * u
                 + cfg.pixel_size * ((y as f64) + 0.5) * v;
 
-            image[(y, x)] = if object.intersect(ray_source, cfg.camera_normal) {
-                255
-            } else {
-                0
-            };
+            image[(y, x)] = (object.intersect(ray_source, cfg.camera_normal) * 255.0) as u8;
         }
     }
     image

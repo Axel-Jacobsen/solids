@@ -10,12 +10,10 @@ use platonic_solids::*;
 use relax_solid::*;
 use triangulate::*;
 
-use crate::view::Draw;
-
 use image::GrayImage;
 
 fn main() {
-    let platonic_solid = PlatonicSolid::Tetrahedron;
+    let platonic_solid = PlatonicSolid::Dodecahedron;
     let neighbors = neighbors_for_solid(&platonic_solid);
     let locations = relax(
         &neighbors,
@@ -24,7 +22,7 @@ fn main() {
             repulsion_constant: 0.1,
             natural_length: 1.0,
             step_size: 1e-4,
-            total_movement_thresh: 1e-3,
+            total_movement_thresh: 1e-6,
         },
     );
 

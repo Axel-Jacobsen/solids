@@ -21,7 +21,7 @@ impl Draw for Solid {
         &self,
         ray_source: nalgebra::Point3<f64>,
         ray_direction: nalgebra::Vector3<f64>,
-    ) -> bool {
+    ) -> f64 {
         for [v0_id, v1_id, v2_id] in self.triangles.iter() {
             // Locations of the verticies of the triangle.
             let (v0, v1, v2) = (
@@ -67,9 +67,9 @@ impl Draw for Solid {
 
             // Intersection is within the triangle.
             if 0.0 <= s && 0.0 <= t && (0.0 <= s + t && s + t <= 1.0) {
-                return true;
+                return triangle_normal.dot(&ray_direction).abs();
             }
         }
-        false
+        0.0
     }
 }
