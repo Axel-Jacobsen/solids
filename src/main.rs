@@ -13,7 +13,7 @@ use triangulate::*;
 use image::GrayImage;
 
 fn main() {
-    let platonic_solid = PlatonicSolid::Dodecahedron;
+    let platonic_solid = PlatonicSolid::Tetrahedron;
     let neighbors = neighbors_for_solid(&platonic_solid);
     let locations = relax(
         &neighbors,

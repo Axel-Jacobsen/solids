@@ -49,9 +49,13 @@ pub fn view<D: Draw>(object: &D, config: &ViewParams) -> ndarray::Array2<u8> {
 // Assume the sensor is in the x,y plane, and z is the normal plane of the camera.
 // If we want a new normal, what is the basis?
 fn basis(normal: nalgebra::Vector3<f64>) -> (nalgebra::Vector3<f64>, nalgebra::Vector3<f64>) {
-    let normal = normal.normalize();
-    let dir = nalgebra::Vector3::z();
-    let u = dir.cross(&normal).normalize();
-    let v = normal.cross(&u);
+    let n = normal.normalize();
+    let a = if n.z.abs() < 0.9 {
+        nalgebra::Vector3::z()
+    } else {
+        nalgebra::Vector3::x()
+    };
+    let u = a.cross(&n).normalize();
+    let v = n.cross(&u);
     (u, v)
 }

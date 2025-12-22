@@ -38,7 +38,7 @@ impl Draw for Solid {
             let triangle_normal = u.cross(&v);
 
             // Triangle is parallel or in-plane with the ray.
-            if triangle_normal.dot(&ray_direction) < EPS {
+            if triangle_normal.dot(&ray_direction).abs() < EPS {
                 continue;
             }
 
@@ -58,12 +58,15 @@ impl Draw for Solid {
             let n1 = u.dot(&v) * w.dot(&v) - (v.dot(&v)) * w.dot(&u);
             let n2 = u.dot(&v) * w.dot(&u) - (u.dot(&u)) * w.dot(&v);
             let denom = u.dot(&v).powf(2.0) - (u.dot(&u)) * (v.dot(&v));
+            if denom.abs() < EPS {
+                continue;
+            }
 
             let s = n1 / denom;
             let t = n2 / denom;
 
             // Intersection is within the triangle.
-            if (0.0 <= s && s <= 1.0) && (0.0 <= t && t <= 1.0) {
+            if 0.0 <= s && 0.0 <= t && (0.0 <= s + t && s + t <= 1.0) {
                 return true;
             }
         }
