@@ -18,8 +18,8 @@ pub trait Draw {
 }
 
 pub struct ViewParams {
-    /// Bottom-left corner of camera sensor
-    pub camera_location: nalgebra::Point3<f64>,
+    /// Center of camera sensor
+    pub camera_center: nalgebra::Point3<f64>,
     /// Normal direction of the camera sensor
     pub camera_normal: nalgebra::Vector3<f64>,
     /// Width of sensor in px
@@ -30,17 +30,28 @@ pub struct ViewParams {
     pub pixel_size: f64,
 }
 
-pub fn view<D: Draw>(object: &D, config: &ViewParams) -> ndarray::Array2<u8> {
-    let (u, v) = basis(config.camera_normal);
-    let mut image = ndarray::Array2::<u8>::zeros((config.image_height_px, config.image_width_px));
-    for x in 0..config.image_width_px {
-        for y in 0..config.image_height_px {
-            // Pixel location wrt bottom-left pixel in sensor coordinates.
-            let ray_source = config.camera_location
-                + config.pixel_size * (x as f64) * u
-                + config.pixel_size * (y as f64) * v;
-            let intersects = object.intersect(ray_source, config.camera_normal);
-            image[(y, x)] = if intersects { 255 } else { 0 };
+pub fn view<D: Draw>(object: &D, cfg: &ViewParams) -> ndarray::Array2<u8> {
+    let (u, v) = basis(cfg.camera_normal);
+
+    let w = cfg.image_width_px as f64 * cfg.pixel_size;
+    let h = cfg.image_height_px as f64 * cfg.pixel_size;
+
+    // bottom-left of sensor plane
+    let origin = cfg.camera_center - 0.5 * w * u - 0.5 * h * v;
+
+    let mut image = ndarray::Array2::<u8>::zeros((cfg.image_height_px, cfg.image_width_px));
+    for x in 0..cfg.image_width_px {
+        for y in 0..cfg.image_height_px {
+            // sample pixel centers
+            let ray_source = origin
+                + cfg.pixel_size * ((x as f64) + 0.5) * u
+                + cfg.pixel_size * ((y as f64) + 0.5) * v;
+
+            image[(y, x)] = if object.intersect(ray_source, cfg.camera_normal) {
+                255
+            } else {
+                0
+            };
         }
     }
     image
