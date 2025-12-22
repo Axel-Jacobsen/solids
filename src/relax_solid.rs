@@ -30,7 +30,7 @@ pub fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
     } = relax_params;
 
     let mut locations: Locations =
-        std::collections::HashMap::from_iter(neighbors.keys().map(|k| (*k, random_point(10.0))));
+        std::collections::HashMap::from_iter(neighbors.keys().map(|k| (*k, random_point(1.0))));
     let mut forces: Forces = std::collections::HashMap::from_iter(
         neighbors.keys().map(|k| (*k, Vector3::new(0.0, 0.0, 0.0))),
     );

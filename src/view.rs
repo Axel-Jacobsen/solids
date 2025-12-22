@@ -30,7 +30,7 @@ pub struct ViewParams {
     pub pixel_size: f64,
 }
 
-pub fn view<D: Draw>(object: D, config: ViewParams) -> ndarray::Array2<u8> {
+pub fn view<D: Draw>(object: &D, config: &ViewParams) -> ndarray::Array2<u8> {
     let (u, v) = basis(config.camera_normal);
     let mut image = ndarray::Array2::<u8>::zeros((config.image_height_px, config.image_width_px));
     for x in 0..config.image_width_px {
