@@ -1,6 +1,7 @@
 //! Generate the Platonic solids as STL files via constraints.
 
 use std::fs::File;
+use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::thread;
@@ -22,9 +23,9 @@ use strum::Display;
 
 #[derive(Clone, Debug, Display, ValueEnum)]
 pub enum OutputType {
-    /// Get a gif of the shape evolving from random point to the final shape. Outputs to `$(pwd)/out.gif`.
+    /// Get a gif of the shape evolving from random point to the final shape. Outputs to `$(pwd)/out.gif` unless `--output` is set.
     EvolutionGif,
-    /// Get an stl file of the final shape. Outputs to `$(pwd)/out.stl`
+    /// Get an stl file of the final shape. Outputs to `$(pwd)/<solid>.stl` unless `--output` is set.
     Stl,
 }
 
@@ -38,17 +39,20 @@ struct Args {
     /// What to do?
     #[arg(short, long, default_value_t=OutputType::EvolutionGif)]
     output_type: OutputType,
+    /// Output file path (gif for EvolutionGif, stl for Stl).
+    #[arg(short, long, value_name = "PATH")]
+    output: Option<PathBuf>,
 }
 
 fn main() {
     let args = Args::parse();
     match args.output_type {
-        OutputType::EvolutionGif => evolution(args.solid),
-        OutputType::Stl => stl(args.solid),
+        OutputType::EvolutionGif => evolution(args.solid, args.output),
+        OutputType::Stl => stl(args.solid, args.output),
     }
 }
 
-fn evolution(solid: PlatonicSolid) {
+fn evolution(solid: PlatonicSolid, output: Option<PathBuf>) {
     let (locations_tx, locations_rx) = channel::<Locations>();
     let (images_tx, images_rx) = channel::<ndarray::Array2<u8>>();
 
@@ -78,7 +82,8 @@ fn evolution(solid: PlatonicSolid) {
 
     // Thread for encoding frames into a gif.
     {
-        let gif_file = File::create("out.gif").expect("failed to create file for out.gif");
+        let output = output.unwrap_or_else(|| PathBuf::from("out.gif"));
+        let gif_file = File::create(&output).expect("failed to create gif output file");
         let mut gif_encoder = GifEncoder::new_with_speed(gif_file, 10);
         gif_encoder
             .set_repeat(image::codecs::gif::Repeat::Infinite)
@@ -119,7 +124,7 @@ fn evolution(solid: PlatonicSolid) {
     drop(images_tx);
 }
 
-fn stl(solid_type: PlatonicSolid) {
+fn stl(solid_type: PlatonicSolid, output: Option<PathBuf>) {
     let relax_params = relax::RelaxParams {
         spring_constant: 1.0,
         repulsion_constant: 0.1,
@@ -141,6 +146,7 @@ fn stl(solid_type: PlatonicSolid) {
             locations,
             triangles,
         },
+        output,
     );
 }
 
@@ -168,9 +174,12 @@ fn add_frame<W: std::io::Write>(
         .expect("failed to encode frame");
 }
 
-fn save_stl(platonic_solid: &PlatonicSolid, solid: &Solid) {
-    let mut path = std::env::current_dir().unwrap();
-    path.push(format!("{}.stl", platonic_solid));
+fn save_stl(platonic_solid: &PlatonicSolid, solid: &Solid, output: Option<PathBuf>) {
+    let path = output.unwrap_or_else(|| {
+        let mut path = std::env::current_dir().unwrap();
+        path.push(format!("{}.stl", platonic_solid));
+        path
+    });
     to_stl(
         platonic_solid.to_string(),
         &path,
