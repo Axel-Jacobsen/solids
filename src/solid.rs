@@ -1,4 +1,3 @@
-use nalgebra;
 
 use crate::view::Draw;
 
@@ -27,9 +26,9 @@ impl Draw for Solid {
         for [v0_id, v1_id, v2_id] in self.triangles.iter() {
             // Locations of the verticies of the triangle.
             let (v0, v1, v2) = (
-                self.locations[&v0_id],
-                self.locations[&v1_id],
-                self.locations[&v2_id],
+                self.locations[v0_id],
+                self.locations[v1_id],
+                self.locations[v2_id],
             );
 
             // Two of the edges of the triangle.
@@ -68,13 +67,11 @@ impl Draw for Solid {
             let t = n2 / denom;
 
             // Intersection is within the triangle.
-            if 0.0 <= s && 0.0 <= t && (0.0 <= s + t && s + t <= 1.0) {
-                if min_distance > ray_triangle_plane_intersection {
-                    min_distance = ray_triangle_plane_intersection;
-                    shade = triangle_normal
-                        .dot(&(-ray_direction.normalize()))
-                        .clamp(0.0, 1.0);
-                }
+            if 0.0 <= s && 0.0 <= t && (0.0 <= s + t && s + t <= 1.0) && min_distance > ray_triangle_plane_intersection {
+                min_distance = ray_triangle_plane_intersection;
+                shade = triangle_normal
+                    .dot(&(-ray_direction.normalize()))
+                    .clamp(0.0, 1.0);
             }
         }
         shade

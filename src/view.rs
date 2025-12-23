@@ -6,8 +6,6 @@
 //! - color / shade of the object in view will be proportional to the angle of incidence of the
 //! light ray on the object.
 
-use nalgebra;
-use ndarray;
 
 pub trait Draw {
     fn intersect(

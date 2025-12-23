@@ -40,6 +40,9 @@ fn main() {
 
     let gif_file = File::create("out.gif").expect("failed to create file for out.gif");
     let mut gif_encoder = GifEncoder::new_with_speed(gif_file, 10);
+    gif_encoder
+        .set_repeat(image::codecs::gif::Repeat::Infinite)
+        .expect("couldn't set repeat");
 
     let (locations_tx, locations_rx) = channel::<Locations>();
     let (images_tx, images_rx) = channel::<ndarray::Array2<u8>>();
@@ -117,7 +120,7 @@ fn main() {
 
 fn save_stl(platonic_solid: &PlatonicSolid, solid: &Solid) {
     let mut path = std::env::current_dir().unwrap();
-    path.push(format!("{}.stl", platonic_solid.to_string()));
+    path.push(format!("{}.stl", platonic_solid));
     to_stl(
         platonic_solid.to_string(),
         &path,

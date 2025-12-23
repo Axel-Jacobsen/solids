@@ -93,9 +93,9 @@ pub fn to_stl<P: AsRef<Path>>(
     writeln!(w, "solid {}", name)?;
 
     for [i0, i1, i2] in triangles {
-        let p0 = locations.get(&i0).expect("missing vertex");
-        let p1 = locations.get(&i1).expect("missing vertex");
-        let p2 = locations.get(&i2).expect("missing vertex");
+        let p0 = locations.get(i0).expect("missing vertex");
+        let p1 = locations.get(i1).expect("missing vertex");
+        let p2 = locations.get(i2).expect("missing vertex");
 
         let v1: nalgebra::Vector3<f64> = p1 - p0;
         let v2: nalgebra::Vector3<f64> = p2 - p0;
