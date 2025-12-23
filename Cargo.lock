@@ -1391,6 +1391,7 @@ dependencies = [
  "ndarray",
  "pprof",
  "rand",
+ "rayon",
  "strum",
  "tracing",
  "tracing-subscriber",
