@@ -40,7 +40,7 @@ struct Args {
     #[arg(short, long, default_value_t=OutputType::EvolutionGif)]
     output_type: OutputType,
     /// Output file path (gif for EvolutionGif, stl for Stl).
-    #[arg(short, long, value_name = "PATH")]
+    #[arg(short = 'f', long, value_name = "PATH")]
     output: Option<PathBuf>,
 }
 

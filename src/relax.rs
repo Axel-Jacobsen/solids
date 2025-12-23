@@ -105,6 +105,9 @@ pub fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
         step += 1;
 
         if total_movement / (neighbors.len() as f64) < total_movement_thresh {
+            if let Some(ref ch) = locations_tx {
+                let _ = ch.send(locations.clone());
+            }
             break;
         }
     }
