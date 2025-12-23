@@ -19,7 +19,8 @@ pub struct RelaxParams {
     pub natural_length: f64,
     pub step_size: f64,
     pub total_movement_thresh: f64,
-    pub locations_tx: Sender<Locations>,
+    pub snapshot_period: u32,
+    pub locations_tx: Option<Sender<Locations>>,
 }
 
 // Relax the locations of the neighbors by assuming each edge is a spring with damper.
@@ -30,6 +31,7 @@ pub fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
         step_size,
         total_movement_thresh,
         repulsion_constant,
+        snapshot_period,
         locations_tx,
     } = relax_params;
 
@@ -94,8 +96,10 @@ pub fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
             p.coords -= centroid;
         }
 
-        if step % 10000 == 0 {
-            let _ = locations_tx.send(locations.clone());
+        if let Some(ref ch) = locations_tx {
+            if step % snapshot_period == 0 {
+                let _ = ch.send(locations.clone());
+            }
         }
 
         step += 1;

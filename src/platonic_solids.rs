@@ -1,8 +1,9 @@
+use clap::ValueEnum;
 use strum::{Display, EnumIter};
 
 use crate::solid::Neighbors;
 
-#[derive(Debug, Display, EnumIter)]
+#[derive(Clone, Debug, Display, EnumIter, ValueEnum)]
 pub enum PlatonicSolid {
     Tetrahedron,
     Cube,

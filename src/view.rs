@@ -4,8 +4,7 @@
 //! - orthographic camera
 //! - image size (w,h) and pixel size derived from sensor size
 //! - color / shade of the object in view will be proportional to the angle of incidence of the
-//! light ray on the object.
-
+//!   light ray on the object.
 
 pub trait Draw {
     fn intersect(

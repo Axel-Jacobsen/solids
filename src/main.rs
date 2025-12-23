@@ -15,15 +15,40 @@ use platonic_solids::*;
 use solid::*;
 use triangulate::*;
 
-use image::codecs::gif::GifEncoder;
-use image::ExtendedColorType;
+use clap::{Parser, ValueEnum};
+use image::{codecs::gif::GifEncoder, ExtendedColorType};
 use rayon::ThreadPoolBuilder;
+use strum::Display;
 
-const NUM_THREADS: usize = 10;
+#[derive(Clone, Debug, Display, ValueEnum)]
+pub enum OutputType {
+    /// Get a gif of the shape evolving from random point to the final shape. Outputs to `$(pwd)/out.gif`.
+    EvolutionGif,
+    /// Get an stl file of the final shape. Outputs to `$(pwd)/out.stl`
+    Stl,
+}
+
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// The solid to evolve.
+    #[arg(short, long, default_value_t=PlatonicSolid::Dodecahedron)]
+    solid: PlatonicSolid,
+    /// What to do?
+    #[arg(short, long, default_value_t=OutputType::EvolutionGif)]
+    output_type: OutputType,
+}
 
 fn main() {
-    let platonic_solid = PlatonicSolid::Dodecahedron;
+    let args = Args::parse();
+    match args.output_type {
+        OutputType::EvolutionGif => evolution(args.solid),
+        OutputType::Stl => stl(args.solid),
+    }
+}
 
+fn evolution(solid: PlatonicSolid) {
     let (locations_tx, locations_rx) = channel::<Locations>();
     let (images_tx, images_rx) = channel::<ndarray::Array2<u8>>();
 
@@ -41,11 +66,12 @@ fn main() {
         natural_length: 1.0,
         step_size: 1e-4,
         total_movement_thresh: 1e-7,
-        locations_tx,
+        snapshot_period: 10_000,
+        locations_tx: Some(locations_tx),
     };
 
     // Thread for evolving the shape.
-    let neighbors = neighbors_for_solid(&platonic_solid);
+    let neighbors = neighbors_for_solid(&solid);
     thread::spawn(move || {
         relax::relax(&neighbors, relax_params);
     });
@@ -71,7 +97,7 @@ fn main() {
 
     // Rendering pool.
     let pool = ThreadPoolBuilder::new()
-        .num_threads(NUM_THREADS - 2)
+        //.num_threads(NUM_THREADS - 2)
         .build()
         .expect("failed to build thread pool.");
 
@@ -91,6 +117,31 @@ fn main() {
     }
 
     drop(images_tx);
+}
+
+fn stl(solid_type: PlatonicSolid) {
+    let relax_params = relax::RelaxParams {
+        spring_constant: 1.0,
+        repulsion_constant: 0.1,
+        natural_length: 1.0,
+        step_size: 1e-4,
+        total_movement_thresh: 1e-7,
+        snapshot_period: 10_000,
+        locations_tx: None,
+    };
+
+    // Thread for evolving the shape.
+    let neighbors = neighbors_for_solid(&solid_type);
+    let locations = relax::relax(&neighbors, relax_params);
+
+    let triangles = hull_triangles(&locations);
+    save_stl(
+        &solid_type,
+        &solid::Solid {
+            locations,
+            triangles,
+        },
+    );
 }
 
 fn add_frame<W: std::io::Write>(
