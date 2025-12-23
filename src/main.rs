@@ -56,9 +56,9 @@ fn main() {
     let view_params = view::ViewParams {
         camera_center: nalgebra::Point3::new(0.0, 0.0, -10.0),
         camera_normal: nalgebra::Vector3::z_axis(),
-        image_width_px: 4000,
-        image_height_px: 4000,
-        pixel_size: 0.001,
+        image_width_px: 400,
+        image_height_px: 400,
+        pixel_size: 0.01,
     };
 
     let image = {
