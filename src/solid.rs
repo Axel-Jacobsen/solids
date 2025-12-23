@@ -20,8 +20,10 @@ impl Draw for Solid {
     fn intersect(
         &self,
         ray_source: nalgebra::Point3<f64>,
-        ray_direction: nalgebra::Vector3<f64>,
+        ray_direction: nalgebra::UnitVector3<f64>,
     ) -> f64 {
+        let mut min_distance = f64::MAX;
+        let mut shade = 0.0;
         for [v0_id, v1_id, v2_id] in self.triangles.iter() {
             // Locations of the verticies of the triangle.
             let (v0, v1, v2) = (
@@ -35,7 +37,7 @@ impl Draw for Solid {
             let v = v2 - v0;
 
             // First, determine if the ray intersects with the plane of the triangle.
-            let triangle_normal = u.cross(&v);
+            let triangle_normal = u.cross(&v).normalize();
 
             // Triangle is parallel or in-plane with the ray.
             if triangle_normal.dot(&ray_direction).abs() < EPS {
@@ -52,7 +54,7 @@ impl Draw for Solid {
 
             // Now, determine whether the intersection with the plane is in the triangle.
             let triangle_plane_intersection =
-                ray_source + ray_triangle_plane_intersection * ray_direction;
+                ray_source + ray_triangle_plane_intersection * *ray_direction;
             let w = triangle_plane_intersection - v0;
 
             let n1 = u.dot(&v) * w.dot(&v) - (v.dot(&v)) * w.dot(&u);
@@ -67,9 +69,14 @@ impl Draw for Solid {
 
             // Intersection is within the triangle.
             if 0.0 <= s && 0.0 <= t && (0.0 <= s + t && s + t <= 1.0) {
-                return triangle_normal.dot(&ray_direction).abs();
+                if min_distance > ray_triangle_plane_intersection {
+                    min_distance = ray_triangle_plane_intersection;
+                    shade = triangle_normal
+                        .dot(&(-ray_direction.normalize()))
+                        .clamp(0.0, 1.0);
+                }
             }
         }
-        0.0
+        shade
     }
 }

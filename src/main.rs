@@ -12,21 +12,41 @@ use triangulate::*;
 
 use image::GrayImage;
 
-fn main() {
-    let platonic_solid = PlatonicSolid::Dodecahedron;
-    let neighbors = neighbors_for_solid(&platonic_solid);
-    let locations = relax(
-        &neighbors,
-        RelaxParams {
-            spring_constant: 1.0,
-            repulsion_constant: 0.1,
-            natural_length: 1.0,
-            step_size: 1e-4,
-            total_movement_thresh: 1e-6,
-        },
-    );
+use tracing::info_span;
+use tracing_subscriber::fmt::format::FmtSpan;
 
-    let triangles = hull_triangles(&locations);
+fn main() {
+    tracing_subscriber::fmt()
+        .with_span_events(FmtSpan::CLOSE)
+        .with_target(false)
+        .compact()
+        .init();
+
+    let platonic_solid = PlatonicSolid::Dodecahedron;
+
+    let neighbors = {
+        let _s = info_span!("neighbors_for_solid").entered();
+        neighbors_for_solid(&platonic_solid)
+    };
+
+    let locations = {
+        let _s = info_span!("relax").entered();
+        relax(
+            &neighbors,
+            RelaxParams {
+                spring_constant: 1.0,
+                repulsion_constant: 0.1,
+                natural_length: 1.0,
+                step_size: 1e-4,
+                total_movement_thresh: 1e-7,
+            },
+        )
+    };
+
+    let triangles = {
+        let _s = info_span!("hull_triangles").entered();
+        hull_triangles(&locations)
+    };
 
     let solid = solid::Solid {
         locations,
@@ -35,29 +55,39 @@ fn main() {
 
     let view_params = view::ViewParams {
         camera_center: nalgebra::Point3::new(0.0, 0.0, -10.0),
-        camera_normal: nalgebra::Vector3::z(),
+        camera_normal: nalgebra::Vector3::z_axis(),
         image_width_px: 4000,
         image_height_px: 4000,
         pixel_size: 0.001,
     };
 
-    let image = view::view(&solid, &view_params);
-    save_image(
-        image,
-        view_params.image_width_px as u32,
-        view_params.image_height_px as u32,
-    );
+    let image = {
+        let _s = info_span!("view").entered();
+        view::view(&solid, &view_params)
+    };
+
+    {
+        let _s = info_span!("save_image").entered();
+        save_image(
+            image,
+            view_params.image_width_px as u32,
+            view_params.image_height_px as u32,
+        );
+    }
 
     let mut path = std::env::current_dir().unwrap();
     path.push(format!("{}.stl", platonic_solid.to_string()));
 
-    to_stl(
-        platonic_solid.to_string(),
-        &path,
-        &solid.triangles,
-        &solid.locations,
-    )
-    .unwrap();
+    {
+        let _s = info_span!("to_stl").entered();
+        to_stl(
+            platonic_solid.to_string(),
+            &path,
+            &solid.triangles,
+            &solid.locations,
+        )
+        .unwrap();
+    }
 }
 
 fn save_image(image: ndarray::Array2<u8>, width: u32, height: u32) {

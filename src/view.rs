@@ -13,7 +13,7 @@ pub trait Draw {
     fn intersect(
         &self,
         ray_source: nalgebra::Point3<f64>,
-        ray_direction: nalgebra::Vector3<f64>,
+        ray_direction: nalgebra::UnitVector3<f64>,
     ) -> f64;
 }
 
@@ -21,7 +21,7 @@ pub struct ViewParams {
     /// Center of camera sensor
     pub camera_center: nalgebra::Point3<f64>,
     /// Normal direction of the camera sensor
-    pub camera_normal: nalgebra::Vector3<f64>,
+    pub camera_normal: nalgebra::UnitVector3<f64>,
     /// Width of sensor in px
     pub image_width_px: usize,
     /// Height of sensor in px
@@ -53,7 +53,7 @@ pub fn view<D: Draw>(object: &D, cfg: &ViewParams) -> ndarray::Array2<u8> {
 
 // Assume the sensor is in the x,y plane, and z is the normal plane of the camera.
 // If we want a new normal, what is the basis?
-fn basis(normal: nalgebra::Vector3<f64>) -> (nalgebra::Vector3<f64>, nalgebra::Vector3<f64>) {
+fn basis(normal: nalgebra::UnitVector3<f64>) -> (nalgebra::Vector3<f64>, nalgebra::Vector3<f64>) {
     let n = normal.normalize();
     let a = if n.z.abs() < 0.9 {
         nalgebra::Vector3::z()
