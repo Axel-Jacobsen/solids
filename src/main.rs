@@ -1,48 +1,28 @@
 //! Generate the Platonic solids as STL files via constraints.
 
-mod platonic_solids;
-mod relax_solid;
-mod solid;
-mod triangulate;
-mod view;
-
 use std::fs::File;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::thread;
 
+mod platonic_solids;
+mod relax;
+mod solid;
+mod triangulate;
+mod view;
+
 use platonic_solids::*;
-use relax_solid::*;
 use solid::*;
 use triangulate::*;
 
 use image::codecs::gif::GifEncoder;
 use image::ExtendedColorType;
 use rayon::ThreadPoolBuilder;
-use tracing::info_span;
-use tracing_subscriber::fmt::format::FmtSpan;
 
 const NUM_THREADS: usize = 10;
 
 fn main() {
-    tracing_subscriber::fmt()
-        .with_span_events(FmtSpan::CLOSE)
-        .with_target(false)
-        .compact()
-        .init();
-
     let platonic_solid = PlatonicSolid::Dodecahedron;
-
-    let pool = ThreadPoolBuilder::new()
-        .num_threads(NUM_THREADS - 2)
-        .build()
-        .expect("failed to build thread pool.");
-
-    let gif_file = File::create("out.gif").expect("failed to create file for out.gif");
-    let mut gif_encoder = GifEncoder::new_with_speed(gif_file, 10);
-    gif_encoder
-        .set_repeat(image::codecs::gif::Repeat::Infinite)
-        .expect("couldn't set repeat");
 
     let (locations_tx, locations_rx) = channel::<Locations>();
     let (images_tx, images_rx) = channel::<ndarray::Array2<u8>>();
@@ -55,7 +35,7 @@ fn main() {
         pixel_size: 0.01,
     });
 
-    let relax_params = RelaxParams {
+    let relax_params = relax::RelaxParams {
         spring_constant: 1.0,
         repulsion_constant: 0.1,
         natural_length: 1.0,
@@ -64,41 +44,36 @@ fn main() {
         locations_tx,
     };
 
+    // Thread for evolving the shape.
     let neighbors = neighbors_for_solid(&platonic_solid);
     thread::spawn(move || {
-        let _s = info_span!("relax").entered();
-        relax(&neighbors, relax_params);
+        relax::relax(&neighbors, relax_params);
     });
 
+    // Thread for encoding frames into a gif.
     {
+        let gif_file = File::create("out.gif").expect("failed to create file for out.gif");
+        let mut gif_encoder = GifEncoder::new_with_speed(gif_file, 10);
+        gif_encoder
+            .set_repeat(image::codecs::gif::Repeat::Infinite)
+            .expect("couldn't set repeat");
+
         let vp = Arc::clone(&view_params);
         thread::spawn(move || {
-            let _s = info_span!("encode_gif").entered();
-
             let w = vp.image_width_px as u32;
             let h = vp.image_height_px as u32;
 
             while let Ok(image) = images_rx.recv() {
-                let luma: Vec<u8> = match image.as_standard_layout().as_slice() {
-                    Some(slice) => slice.to_vec(),
-                    None => image.iter().copied().collect(),
-                };
-
-                // Expand L8 -> Rgb8
-                let mut rgb = Vec::with_capacity(luma.len() * 3);
-                for y in luma {
-                    rgb.push(y);
-                    rgb.push(y);
-                    rgb.push(y);
-                }
-
-                if let Err(e) = gif_encoder.encode(&rgb, w, h, ExtendedColorType::Rgb8) {
-                    eprintln!("gif encode failed: {e}");
-                    break;
-                }
+                add_frame(image, w, h, &mut gif_encoder);
             }
         });
     }
+
+    // Rendering pool.
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(NUM_THREADS - 2)
+        .build()
+        .expect("failed to build thread pool.");
 
     while let Ok(locations) = locations_rx.recv() {
         let vp = Arc::clone(&view_params);
@@ -116,6 +91,30 @@ fn main() {
     }
 
     drop(images_tx);
+}
+
+fn add_frame<W: std::io::Write>(
+    image: ndarray::Array2<u8>,
+    w: u32,
+    h: u32,
+    gif_encoder: &mut GifEncoder<W>,
+) {
+    let luma: Vec<u8> = match image.as_standard_layout().as_slice() {
+        Some(slice) => slice.to_vec(),
+        None => image.iter().copied().collect(),
+    };
+
+    // Expand L8 -> Rgb8
+    let mut rgb = Vec::with_capacity(luma.len() * 3);
+    for y in luma {
+        rgb.push(y);
+        rgb.push(y);
+        rgb.push(y);
+    }
+
+    gif_encoder
+        .encode(&rgb, w, h, ExtendedColorType::Rgb8)
+        .expect("failed to encode frame");
 }
 
 fn save_stl(platonic_solid: &PlatonicSolid, solid: &Solid) {
