@@ -70,7 +70,7 @@ fn evolution(solid: PlatonicSolid, output: Option<PathBuf>) {
         natural_length: 1.0,
         step_size: 1e-4,
         total_movement_thresh: 1e-7,
-        snapshot_period: 10_000,
+        snapshot_period: 5_000,
         locations_tx: Some(locations_tx),
     };
 
