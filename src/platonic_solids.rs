@@ -36,17 +36,11 @@ pub fn neighbors_for_solid(solid: &PlatonicSolid) -> Neighbors {
     let edges = edges_for_solid(solid);
 
     let n = number_of_verticies(solid);
-    let mut neighbors: Neighbors = (0..n).map(|i| (i, Vec::new())).collect();
+    let mut neighbors: Neighbors = vec![Vec::new(); n];
 
     for &(a, b) in edges {
-        neighbors
-            .get_mut(&a)
-            .expect("can't find vertex for edge")
-            .push(b);
-        neighbors
-            .get_mut(&b)
-            .expect("can't find vertex for edge")
-            .push(a);
+        neighbors[a].push(b);
+        neighbors[b].push(a);
     }
 
     neighbors

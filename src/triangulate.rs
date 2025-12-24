@@ -6,9 +6,8 @@ use crate::solid::{Locations, VertexId};
 
 /// Slow hull algorithm.
 pub fn hull_triangles(locations: &Locations) -> Vec<[VertexId; 3]> {
-    let mut ids: Vec<VertexId> = locations.keys().copied().collect();
-    ids.sort();
-    let n = ids.len();
+    let n = locations.len();
+    let ids: Vec<VertexId> = (0..n).collect();
 
     let mut seen = std::collections::HashSet::<(VertexId, VertexId, VertexId)>::new();
     let mut tris = Vec::<[VertexId; 3]>::new();
@@ -20,9 +19,9 @@ pub fn hull_triangles(locations: &Locations) -> Vec<[VertexId; 3]> {
                 let j = ids[b];
                 let k = ids[c];
 
-                let pi = locations[&i];
-                let pj = locations[&j];
-                let pk = locations[&k];
+                let pi = locations[i];
+                let pj = locations[j];
+                let pk = locations[k];
 
                 let v1: nalgebra::Vector3<f64> = pj - pi;
                 let v2: nalgebra::Vector3<f64> = pk - pi;
@@ -43,7 +42,7 @@ pub fn hull_triangles(locations: &Locations) -> Vec<[VertexId; 3]> {
                     if l_id == i || l_id == j || l_id == k {
                         continue;
                     }
-                    let pl = locations[&l_id];
+                    let pl = locations[l_id];
                     let d = nrm.dot(&(pl - pi));
                     if d < min_d {
                         min_d = d;
@@ -93,9 +92,9 @@ pub fn to_stl<P: AsRef<Path>>(
     writeln!(w, "solid {}", name)?;
 
     for [i0, i1, i2] in triangles {
-        let p0 = locations.get(i0).expect("missing vertex");
-        let p1 = locations.get(i1).expect("missing vertex");
-        let p2 = locations.get(i2).expect("missing vertex");
+        let p0 = locations.get(*i0).expect("missing vertex");
+        let p1 = locations.get(*i1).expect("missing vertex");
+        let p2 = locations.get(*i2).expect("missing vertex");
 
         let v1: nalgebra::Vector3<f64> = p1 - p0;
         let v2: nalgebra::Vector3<f64> = p2 - p0;

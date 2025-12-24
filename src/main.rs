@@ -59,9 +59,9 @@ fn evolution(solid: PlatonicSolid, output: Option<PathBuf>) {
     let view_params = Arc::new(view::ViewParams {
         camera_center: nalgebra::Point3::new(0.0, 0.0, -10.0),
         camera_normal: nalgebra::Vector3::z_axis(),
-        image_width_px: 400,
-        image_height_px: 400,
-        pixel_size: 0.01,
+        image_width_px: 800,
+        image_height_px: 800,
+        pixel_size: 0.005,
     });
 
     let relax_params = relax::RelaxParams {
@@ -70,7 +70,7 @@ fn evolution(solid: PlatonicSolid, output: Option<PathBuf>) {
         natural_length: 1.0,
         step_size: 1e-4,
         total_movement_thresh: 1e-7,
-        snapshot_period: 5_000,
+        snapshot_period: 1_000,
         locations_tx: Some(locations_tx),
     };
 
@@ -86,7 +86,7 @@ fn evolution(solid: PlatonicSolid, output: Option<PathBuf>) {
         let gif_file = File::create(&output).expect("failed to create gif output file");
         let mut gif_encoder = GifEncoder::new_with_speed(gif_file, 10);
         gif_encoder
-            .set_repeat(image::codecs::gif::Repeat::Infinite)
+            .set_repeat(image::codecs::gif::Repeat::Finite(1))
             .expect("couldn't set repeat");
 
         let vp = Arc::clone(&view_params);
@@ -121,9 +121,7 @@ fn evolution(solid: PlatonicSolid, output: Option<PathBuf>) {
     }
 
     drop(images_tx);
-    encoder_handle
-        .join()
-        .expect("gif encoder thread failed");
+    encoder_handle.join().expect("gif encoder thread failed");
 }
 
 fn stl(solid_type: PlatonicSolid, output: Option<PathBuf>) {

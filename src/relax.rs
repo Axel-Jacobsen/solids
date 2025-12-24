@@ -3,9 +3,9 @@ use std::sync::mpsc::Sender;
 use nalgebra::{Point3, Vector3};
 use rand::prelude::*;
 
-use crate::solid::{Locations, Neighbors, VertexId};
+use crate::solid::{Locations, Neighbors};
 
-type Forces = std::collections::HashMap<VertexId, Vector3<f64>>;
+type Forces = Vec<Vector3<f64>>;
 
 fn random_point(sphere_size: f64) -> Point3<f64> {
     let mut rng = rand::rng();
@@ -35,64 +35,67 @@ pub fn relax(neighbors: &Neighbors, relax_params: RelaxParams) -> Locations {
         locations_tx,
     } = relax_params;
 
-    let mut locations: Locations =
-        std::collections::HashMap::from_iter(neighbors.keys().map(|k| (*k, random_point(1.0))));
-    let mut forces: Forces = std::collections::HashMap::from_iter(
-        neighbors.keys().map(|k| (*k, Vector3::new(0.0, 0.0, 0.0))),
-    );
+    let mut locations: Locations = neighbors
+        .iter()
+        .map(|_| random_point(1.0))
+        .collect();
+    let mut forces: Forces = neighbors
+        .iter()
+        .map(|_| Vector3::new(0.0, 0.0, 0.0))
+        .collect();
 
     let mut step = 0;
     loop {
         // Reset forces
-        for f in forces.values_mut() {
+        for f in forces.iter_mut() {
             *f = Vector3::new(0.0, 0.0, 0.0);
         }
 
         // Calculate the net force on each vertex.
-        for (vertex, vertex_neighbors) in neighbors.iter() {
-            let this_vertex_location = locations.get(vertex).unwrap(); // I weep for the unwraps.
+        for (vertex, vertex_neighbors) in neighbors.iter().enumerate() {
+            let this_vertex_location = &locations[vertex];
 
-            for neighbor in vertex_neighbors {
-                let neighbor_location = locations.get(neighbor).unwrap();
+            for &neighbor in vertex_neighbors {
+                let neighbor_location = &locations[neighbor];
                 let distance = nalgebra::distance(neighbor_location, this_vertex_location);
 
                 // Spring.
                 let spring_force_mag = 0.5 * spring_constant * (distance - natural_length);
-                *forces.get_mut(vertex).unwrap() +=
+                forces[vertex] +=
                     spring_force_mag * (neighbor_location - this_vertex_location).normalize();
             }
 
             // Repulsion.
-            for other_vertex in neighbors.keys() {
+            for other_vertex in 0..neighbors.len() {
                 if other_vertex == vertex {
                     continue;
                 }
 
-                let neighbor_location = locations.get(other_vertex).unwrap();
+                let neighbor_location = &locations[other_vertex];
                 let distance = nalgebra::distance(neighbor_location, this_vertex_location);
 
                 let repulsion_force_mag = -repulsion_constant / (distance * distance);
 
-                *forces.get_mut(vertex).unwrap() +=
+                forces[vertex] +=
                     repulsion_force_mag * (neighbor_location - this_vertex_location).normalize();
             }
         }
 
         // Update states.
         let mut total_movement = 0.0;
-        for vertex in neighbors.keys() {
+        for vertex in 0..neighbors.len() {
             let movement = forces[vertex] * step_size;
-            *locations.get_mut(vertex).unwrap() += movement;
+            locations[vertex] += movement;
             total_movement += movement.norm();
         }
 
         // Recenter.
         let mut centroid = Vector3::new(0.0, 0.0, 0.0);
-        for p in locations.values() {
+        for p in locations.iter() {
             centroid += p.coords;
         }
         centroid /= locations.len() as f64;
-        for p in locations.values_mut() {
+        for p in locations.iter_mut() {
             p.coords -= centroid;
         }
 
