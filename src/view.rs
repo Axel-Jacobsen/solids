@@ -7,6 +7,8 @@
 //!   light ray on the object.
 
 pub trait Draw {
+    /// Gets the shade of the pixel given the ray.
+    /// Should return floats within [0,1].
     fn intersect(
         &self,
         ray_source: nalgebra::Point3<f64>,
