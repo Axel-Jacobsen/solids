@@ -102,7 +102,6 @@ fn evolution(solid: PlatonicSolid, output: Option<PathBuf>) {
 
     // Rendering pool.
     let pool = ThreadPoolBuilder::new()
-        //.num_threads(NUM_THREADS - 2)
         .build()
         .expect("failed to build thread pool.");
 
