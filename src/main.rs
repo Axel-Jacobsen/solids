@@ -81,7 +81,7 @@ fn evolution(solid: PlatonicSolid, output: Option<PathBuf>) {
     });
 
     // Thread for encoding frames into a gif.
-    {
+    let encoder_handle = {
         let output = output.unwrap_or_else(|| PathBuf::from("out.gif"));
         let gif_file = File::create(&output).expect("failed to create gif output file");
         let mut gif_encoder = GifEncoder::new_with_speed(gif_file, 10);
@@ -97,8 +97,8 @@ fn evolution(solid: PlatonicSolid, output: Option<PathBuf>) {
             while let Ok(image) = images_rx.recv() {
                 add_frame(image, w, h, &mut gif_encoder);
             }
-        });
-    }
+        })
+    };
 
     // Rendering pool.
     let pool = ThreadPoolBuilder::new()
@@ -121,6 +121,9 @@ fn evolution(solid: PlatonicSolid, output: Option<PathBuf>) {
     }
 
     drop(images_tx);
+    encoder_handle
+        .join()
+        .expect("gif encoder thread failed");
 }
 
 fn stl(solid_type: PlatonicSolid, output: Option<PathBuf>) {
